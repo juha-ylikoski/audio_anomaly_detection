@@ -1,1 +1,1 @@
-# audio_anomaly_detection
+# Learned image compression
