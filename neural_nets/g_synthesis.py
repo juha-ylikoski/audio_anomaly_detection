@@ -3,8 +3,7 @@
 from torch.nn import Sequential, ConvTranspose2d
 from torch import rand
 
-import attention_module
-import residual_bottleneck
+from . import residual_bottleneck
 
 
 def Model(in_channels, N):

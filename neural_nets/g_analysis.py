@@ -1,9 +1,8 @@
 
-from torch.nn import Sequential, Conv2d, ReLU
+from torch.nn import Sequential, Conv2d
 from torch import rand
 
-import attention_module
-import residual_bottleneck
+from . import residual_bottleneck
 
 
 def Model(out_channels, N):
