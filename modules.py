@@ -39,7 +39,8 @@ class SCCTXModel(nn.Module):
                             y_hat: List[torch.Tensor], 
                             block_i: int, 
                             psi: torch.Tensor, 
-                            y_anchor: torch.Tensor) -> Tuple[torch.Tensor]:
+                            y_anchor: torch.Tensor,
+                            mask: bool = False) -> Tuple[torch.Tensor]:
         """
         @params:
         y_hat: List of tensors shape (bs,ch,h,w)
@@ -58,7 +59,10 @@ class SCCTXModel(nn.Module):
             ch_cx = torch.zeros_like(sp_cx)
         else:
             ch_cx = self.g_chs[block_i-1](torch.cat(y_hat, dim=1))
-
+        if mask:
+            # masks the anchor. Used during training to get one pass encoding
+            sp_cx[:, :, 0::2, 1::2] = 0
+            sp_cx[:, :, 1::2, 0::2] = 0
         cat = torch.cat((sp_cx, ch_cx, psi), dim=1)
         # add masking option for training??
         theta = self.param_aggs[block_i](cat)

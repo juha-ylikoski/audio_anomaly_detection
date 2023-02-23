@@ -4,6 +4,9 @@ from torch.nn import Sequential, Conv2d, ReLU
 
 
 def Model(N):
+    """
+    Refer to compressAI/models/google/ minnen2018 h_a
+    """
     return Sequential(
         Conv2d(N, N, kernel_size=3, stride=1, padding=1),
         ReLU(),

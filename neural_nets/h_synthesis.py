@@ -5,6 +5,9 @@ from torch.nn import Sequential, ReLU, ConvTranspose2d
 
 
 def Model(N):
+    """
+    Refer to compressAI/models/google/ minnen2018 h_s
+    """
     return Sequential(
         ConvTranspose2d(N, N, kernel_size=5, stride=2,
                         padding=2, output_padding=1),
@@ -12,7 +15,7 @@ def Model(N):
         ConvTranspose2d(N, N, kernel_size=5, stride=2,
                         padding=2, output_padding=1),
         ReLU(),
-        ConvTranspose2d(N, N, kernel_size=3, stride=1, padding=1)
+        ConvTranspose2d(N, 2*N, kernel_size=3, stride=1, padding=1)
     )
 
 

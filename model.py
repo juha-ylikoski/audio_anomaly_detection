@@ -1,15 +1,6 @@
 from typing import Dict, List
-import torch.nn as nn
 import torch
 
-from compressai.layers import (
-    AttentionBlock,
-    ResidualBlock,
-    ResidualBlockUpsample,
-    ResidualBlockWithStride,
-    conv3x3,
-    #conv1x1
-)
 from compressai.ans import BufferedRansEncoder, RansDecoder
 from compressai.entropy_models import (
     GaussianConditional,
@@ -17,7 +8,7 @@ from compressai.entropy_models import (
 )
 from compressai.models import JointAutoregressiveHierarchicalPriors
 
-from modules import SCCTXModel, conv1x1
+from modules import SCCTXModel
 
 from neural_nets import g_analysis, g_synthesis, h_analysis, h_synthesis
 
@@ -25,16 +16,20 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
     """
     Args:
         N (int): Number of channels
-      """
-    def __init__(self, N=192, M=192, **kwargs):
+    """
+    def __init__(self, N=192, M=192, block_sizes: List[int] = None, **kwargs):
         super().__init__(N=N, M=M, **kwargs)
-        self.block_sizes = [16,16,32,64,M-128]
+        self.block_sizes = block_sizes if block_sizes else [16,16,32,64,M-128]
 
-        self.h_a = h_analysis.Model(N)
-        self.h_s = h_synthesis.Model(M)
+        # actually we can just use the inherited h_a and h_s from
+        # JointAutoregressiveHierarchicalPriors
+        # as they stated in last paragraph of supplementary material 1.1
+    
+        # self.h_a = h_analysis.Model(N)
+        # self.h_s = h_synthesis.Model(M)
 
-        self.g_a = g_analysis.Model(N)
-        self.g_s = g_synthesis.Model(M)
+        self.g_a = g_analysis.Model(M, N)
+        self.g_s = g_synthesis.Model(M, N)
 
         self.scctx = SCCTXModel(self.M, self.block_sizes)     
 
@@ -73,7 +68,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
 
             # mask anchor before param agg. like in checkerboard.
             mean, scale = self.scctx.predict_non_anchor(yhat, i, psi, block, mask=True)
-            _, y_l = self.gaussian_conditional(block, scale, mean=mean)
+            _, y_l = self.gaussian_conditional(block, scale, means=mean)
 
             yhat.append(block_hat)
             y_likelihoods.append(y_l)
@@ -106,7 +101,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
         z = self.h_a(y)
         z_strings = self.entropy_bottleneck.compress(z)
         z_hat = self.entropy_bottleneck.decompress(z_strings, z.size()[-2:])
-        psi = self.h_s(z_hat)
+        psi = self.h_s(z_hat) # can we use directly z here
 
         blocks = y.split(self.block_sizes, dim=1)
         y_hat = []
@@ -117,7 +112,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             m, s = self.scctx.predict_non_anchor(y_hat,i,psi,anchor_hat)
             non_anchor_hat = self.compress_nonanchor(block,s,m,symbols_list,indexes_list)
             encoder.encode_with_indexes(symbols_list, indexes_list, cdf, cdf_lengths, offsets)
-            # how these handle for in loop?
+            # how to handle these in loop?
             y_string = encoder.flush()
             y_strings.append(y_string)
         # ....

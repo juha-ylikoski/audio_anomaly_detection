@@ -6,9 +6,9 @@ from torch import rand
 from . import residual_bottleneck
 
 
-def Model(in_channels, N):
+def Model(M: int, N: int) -> Sequential:
     return Sequential(
-        ConvTranspose2d(in_channels, N, kernel_size=5,
+        ConvTranspose2d(M, N, kernel_size=5,
                         stride=2, padding=2, output_padding=1),
         residual_bottleneck.Model(N),
         ConvTranspose2d(N, N, kernel_size=5, stride=2,
