@@ -19,6 +19,8 @@ from compressai.models import JointAutoregressiveHierarchicalPriors
 
 from modules import SCCTXModel, conv1x1
 
+from neural_nets import g_analysis, g_synthesis, h_analysis, h_synthesis
+
 class ELICModel(JointAutoregressiveHierarchicalPriors):
     """
     Args:
@@ -27,30 +29,12 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
     def __init__(self, N=192, M=192, **kwargs):
         super().__init__(N=N, M=M, **kwargs)
         self.block_sizes = [16,16,32,64,M-128]
-        self.g_a = nn.Sequential(
-            # something like this
-            ResidualBlockWithStride(3, N, stride=2),
-            ResidualBlock(N, N),
-            ResidualBlockWithStride(N, N, stride=2),
-            AttentionBlock(N),
-            ResidualBlock(N, N),
-            ResidualBlockWithStride(N, N, stride=2),
-            ResidualBlock(N, N),
-            conv3x3(N, N, stride=2),
-            AttentionBlock(N),
-        )
 
-        self.h_a = nn.Sequential(
-            
-        )
+        self.h_a = h_analysis.Model(N)
+        self.h_s = h_synthesis.Model(M)
 
-        self.h_s = nn.Sequential(
-            
-        )
-
-        self.g_s = nn.Sequential(
-            
-        )
+        self.g_a = g_analysis.Model(N)
+        self.g_s = g_synthesis.Model(M)
 
         self.scctx = SCCTXModel(self.M, self.block_sizes)     
 
