@@ -60,8 +60,8 @@ class SCCTXModel(nn.Module):
             ch_cx = self.g_chs[block_i-1](torch.cat(y_hat, dim=1))
 
         cat = torch.cat((sp_cx, ch_cx, psi), dim=1)
+        # add masking option for training??
         theta = self.param_aggs[block_i](cat)
-        #print(f"{theta.shape=}")
         scales, means = theta.chunk(2,1)
         return means, scales
 
@@ -86,7 +86,6 @@ class SCCTXModel(nn.Module):
         cat = torch.cat((sp_cx, ch_cx, psi), dim=1)
         theta = self.param_aggs[block_i](cat)
         scales, means = theta.chunk(2,1)
-        #print(f"{theta.shape=}")
         return means, scales
 
 
