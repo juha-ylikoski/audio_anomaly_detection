@@ -79,28 +79,39 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
         }
 
-    @torch.no_grad()
     def compress(self, x: torch.Tensor) -> Dict:
         """
         returns dict with keys 'strings' and 'shape'
         'strings' is list of compressed y and z
         'shape' is h,w shape of z
         """
-        cdf = self.gaussian_conditional.quantized_cdf.tolist()
-        cdf_lengths = self.gaussian_conditional.cdf_length.reshape(-1).int().tolist()
-        offsets = self.gaussian_conditional.offset.reshape(-1).int().tolist()
-        encoder = BufferedRansEncoder()
-        symbols_list = []
-        indexes_list = []
-        y_strings = []
-
         y = self.g_a(x)
         z = self.h_a(y)
         z_strings = self.entropy_bottleneck.compress(z)
         z_hat = self.entropy_bottleneck.decompress(z_strings, z.size()[-2:])
         psi = self.h_s(z_hat) # can we use directly z here
 
-        blocks = y.split(self.block_sizes, dim=1)
+        y_strings = []
+        for i in range(y.size(0)):
+            string = self.compress_batch(y[[i],:,:,:], psi[[i],:,:,:])
+            y_strings.append(string)
+
+        return {
+            "strings": [y_strings, z_strings],
+            "shape": z.size()[-2:]
+        }
+    
+    @torch.no_grad()
+    def compress_batch(self, x: torch.Tensor, psi: torch.Tensor) -> str:
+
+        cdf = self.gaussian_conditional.quantized_cdf.tolist()
+        cdf_lengths = self.gaussian_conditional.cdf_length.reshape(-1).int().tolist()
+        offsets = self.gaussian_conditional.offset.reshape(-1).int().tolist()
+        encoder = BufferedRansEncoder()
+        symbols_list = []
+        indexes_list = []
+
+        blocks = x.split(self.block_sizes, dim=1)
         y_hat = []
 
         for i, block in enumerate(blocks):
@@ -108,42 +119,41 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             anchor_hat = self.compress_anchor(block,s,m,symbols_list,indexes_list)
             m, s = self.scctx.predict_non_anchor(y_hat,i,psi,anchor_hat)
             non_anchor_hat = self.compress_nonanchor(block,s,m,symbols_list,indexes_list)
-            encoder.encode_with_indexes(symbols_list, indexes_list, cdf, cdf_lengths, offsets)
-            # how to handle these in loop?
-            y_string = encoder.flush()
-            y_strings.append(y_string)
+            y_hat.append(anchor_hat+non_anchor_hat)
 
-            # we don't need to do this in final round
-            y_hat.append(anchor_hat + non_anchor_hat)
-        # ....
+        encoder.encode_with_indexes(symbols_list, indexes_list, cdf, cdf_lengths, offsets)
+        y_string = encoder.flush()
+        return y_string
 
-        return {
-            "strings": [y_strings, z_strings],
-            "shape": z.size()[-2:]
-        }
-
-    @torch.no_grad()
     def decompress(self, strings: list, shape: torch.Size) -> Dict:
         """
         returns dict with key 'x_hat'
         """
         assert isinstance(strings, list) and len(strings) == 2
+        z_strings = strings[1]
+        z_hat = self.entropy_bottleneck.decompress(z_strings, shape)
+        psi = self.h_s(z_hat)
 
+        y_batches = []
+        for i, y_string in enumerate(strings[0]):
+            y_b = self.decompress_batch(y_string, psi[[i],:,:,:])
+            y_batches.append(y_b)
+
+        y_hat = torch.cat(y_batches, dim=0)
+        x_hat = self.g_s(y_hat)
+
+        return {"x_hat": x_hat}
+    
+    @torch.no_grad()
+    def decompress_batch(self, batch: str, psi: torch.Tensor) -> torch.Tensor:
         cdf = self.gaussian_conditional.quantized_cdf.tolist()
         cdf_lengths = self.gaussian_conditional.cdf_length.reshape(-1).int().tolist()
         offsets = self.gaussian_conditional.offset.reshape(-1).int().tolist()
         decoder = RansDecoder()
-
-        y_strings = strings[0]
-        assert len(y_strings) == len(self.block_sizes)
-        z_strings = strings[1]
-
-        z_hat = self.entropy_bottleneck.decompress(z_strings, shape)
-        psi = self.h_s(z_hat)
+        decoder.set_stream(batch)
 
         y_hat = []
-        for i, block in enumerate(y_strings):
-            decoder.set_stream(block)
+        for i in range(len(self.block_sizes)):
             m, s = self.scctx.predict_anchor(y_hat, i, psi)
             anchor_hat = self.decompress_anchor(s,m,decoder,cdf,cdf_lengths,offsets)
             m, s = self.scctx.predict_non_anchor(y_hat, i, psi, anchor_hat)
@@ -152,11 +162,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             y_hat.append(block_hat)
 
         y_hat = torch.cat(y_hat, dim=1)
-        x_hat = self.g_s(y_hat)
-
-        return {
-            "x_hat": x_hat
-        }
+        return y_hat
  
 
     #####################################
