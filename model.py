@@ -2,10 +2,7 @@ from typing import Dict, List
 import torch
 
 from compressai.ans import BufferedRansEncoder, RansDecoder
-from compressai.entropy_models import (
-    GaussianConditional,
-    EntropyBottleneck,
-)
+
 from compressai.models import JointAutoregressiveHierarchicalPriors
 
 from modules import SCCTXModel
@@ -82,7 +79,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
         }
 
-
+    @torch.no_grad()
     def compress(self, x: torch.Tensor) -> Dict:
         """
         returns dict with keys 'strings' and 'shape'
@@ -115,6 +112,9 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             # how to handle these in loop?
             y_string = encoder.flush()
             y_strings.append(y_string)
+
+            # we don't need to do this in final round
+            y_hat.append(anchor_hat + non_anchor_hat)
         # ....
 
         return {
@@ -122,6 +122,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             "shape": z.size()[-2:]
         }
 
+    @torch.no_grad()
     def decompress(self, strings: list, shape: torch.Size) -> Dict:
         """
         returns dict with key 'x_hat'
@@ -133,16 +134,16 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
         offsets = self.gaussian_conditional.offset.reshape(-1).int().tolist()
         decoder = RansDecoder()
 
-        y_strings = strings[0] #[0] ?
+        y_strings = strings[0]
         assert len(y_strings) == len(self.block_sizes)
         z_strings = strings[1]
-        decoder.set_stream(y_strings)
 
         z_hat = self.entropy_bottleneck.decompress(z_strings, shape)
         psi = self.h_s(z_hat)
 
         y_hat = []
         for i, block in enumerate(y_strings):
+            decoder.set_stream(block)
             m, s = self.scctx.predict_anchor(y_hat, i, psi)
             anchor_hat = self.decompress_anchor(s,m,decoder,cdf,cdf_lengths,offsets)
             m, s = self.scctx.predict_non_anchor(y_hat, i, psi, anchor_hat)
