@@ -31,6 +31,8 @@ import argparse
 import random
 import shutil
 import sys
+import time
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -43,6 +45,8 @@ from compressai.datasets import ImageFolder
 from compressai.losses import RateDistortionLoss
 from compressai.optimizers import net_aux_optimizer
 from compressai.zoo import image_models
+
+from torch.utils.tensorboard import SummaryWriter
 
 
 class AverageMeter:
@@ -83,10 +87,16 @@ def configure_optimizers(net, args):
 
 
 def train_one_epoch(
-    model, criterion, train_dataloader, optimizer, aux_optimizer, epoch, clip_max_norm
+    model, criterion, train_dataloader, optimizer, aux_optimizer, epoch, clip_max_norm, writer
 ):
     model.train()
     device = next(model.parameters()).device
+
+    start = time.time()
+    loss_l = []
+    mse_loss_l = []
+    bpp_loss_l = []
+    aux_loss_l = []
 
     for i, d in enumerate(train_dataloader):
         d = d.to(device)
@@ -116,9 +126,29 @@ def train_one_epoch(
                 f'\tBpp loss: {out_criterion["bpp_loss"].item():.2f} |'
                 f"\tAux loss: {aux_loss.item():.2f}"
             )
+            loss_l.append(out_criterion["loss"].item())
+            mse_loss_l.append(out_criterion["mse_loss"].item())
+            bpp_loss_l.append(out_criterion["bpp_loss"].item())
+            aux_loss_l.append(aux_loss.item())
+
+    end = time.time()
+    time_diff = end - start
+    loss_l = np.array(loss_l).mean()
+    mse_loss_l = np.array(mse_loss_l).mean()
+    bpp_loss_l = np.array(bpp_loss_l).mean()
+    aux_loss_l = np.array(aux_loss_l).mean()
+    writer.add_scalar('loss/train', loss_l, epoch)
+    writer.add_scalar('mse_loss/train', mse_loss_l, epoch)
+    writer.add_scalar('bpp_loss/train', bpp_loss_l, epoch)
+    writer.add_scalar('aux_loss/train', aux_loss_l, epoch)
+    writer.add_scalar('time/train', time_diff, epoch)
 
 
-def test_epoch(epoch, test_dataloader, model, criterion):
+
+
+
+
+def test_epoch(epoch, test_dataloader, model, criterion, writer):
     model.eval()
     device = next(model.parameters()).device
 
@@ -126,6 +156,8 @@ def test_epoch(epoch, test_dataloader, model, criterion):
     bpp_loss = AverageMeter()
     mse_loss = AverageMeter()
     aux_loss = AverageMeter()
+
+    start = time.time()
 
     with torch.no_grad():
         for d in test_dataloader:
@@ -145,6 +177,13 @@ def test_epoch(epoch, test_dataloader, model, criterion):
         f"\tBpp loss: {bpp_loss.avg:.2f} |"
         f"\tAux loss: {aux_loss.avg:.2f}\n"
     )
+    end = time.time()
+    time_diff = end - start
+    writer.add_scalar('loss/test', loss.avg, epoch)
+    writer.add_scalar('mse_loss/test', mse_loss.avg, epoch)
+    writer.add_scalar('bpp_loss/test', bpp_loss.avg, epoch)
+    writer.add_scalar('aux_loss/test', aux_loss.avg, epoch)
+    writer.add_scalar('time/test', time_diff, epoch)
 
     return loss.avg
 
@@ -269,8 +308,14 @@ def main(argv):
         pin_memory=(device == "cuda"),
     )
     from model import ELICModel
+    writer = SummaryWriter()
+    M = 192
+    N = 192
     net = ELICModel(N=192,M=192)
     net = net.to(device)
+    writer.add_text("M", str(M))
+    writer.add_text("N", str(N))
+    writer.add_text("block_size", str(net.block_sizes))
 
     if args.cuda and torch.cuda.device_count() > 1:
         net = CustomDataParallel(net)
@@ -300,9 +345,10 @@ def main(argv):
             aux_optimizer,
             epoch,
             args.clip_max_norm,
+            writer
         )
         if epoch %20==0:
-            loss = test_epoch(epoch, test_dataloader, net, criterion)
+            loss = test_epoch(epoch, test_dataloader, net, criterion, writer)
             lr_scheduler.step(loss)
 
             is_best = loss < best_loss
