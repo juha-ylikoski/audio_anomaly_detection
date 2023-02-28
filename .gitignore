@@ -1,1 +1,6 @@
 *.pyc
+CLIC Dataset/
+dataset/
+checkpoint_best_loss.pth.tar
+checkpoint.pth/
+output_*
