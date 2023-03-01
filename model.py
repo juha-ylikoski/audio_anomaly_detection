@@ -13,6 +13,9 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
     """
     Args:
         N (int): Number of channels
+        M (int): Number of channels in the expansion layers (last layer of the
+            encoder and last layer of the hyperprior decoder)
+        block_sizes: List of blocks sizes to use in SCCTX-model
     """
     def __init__(self, N=192, M=192, block_sizes: List[int] = None, **kwargs):
         super().__init__(N=N, M=M, **kwargs)
@@ -21,13 +24,11 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
         # actually we can just use the inherited h_a and h_s from
         # JointAutoregressiveHierarchicalPriors
         # as they stated in last paragraph of supplementary material 1.1
-    
         # self.h_a = h_analysis.Model(N)
         # self.h_s = h_synthesis.Model(M)
 
-        self.g_a = g_analysis.Model(M, N)
-        self.g_s = g_synthesis.Model(M, N)
-
+        self.g_a = g_analysis.Model(self.M, self.N)
+        self.g_s = g_synthesis.Model(self.M, self.N)
         self.scctx = SCCTXModel(self.M, self.block_sizes)     
 
         # inherited
@@ -38,7 +39,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
 
     def forward(self, x: torch.Tensor) -> Dict:
         """
-        executes the full forward pass for training. compress+decompress  
+        Executes the model forward pass with one pass latent encoding
         returns dict with keys 'x_hat' and 'likelihoods'
         'likelihoods' is dict with keys 'y' and 'z'
         """
@@ -49,9 +50,6 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
         
         yhat = []
         y_likelihoods = []
-        # needs to somehow keep track of y_likelihoods?
-        # can we take shortcut in forward pass and only derive y_likelihoods from scctx
-        # and use just y_hat with self.gaussian_conditional.quantize(y, "noise")
         
         # do we need to sort the channels according to energy?
         y_split = y.split(self.block_sizes, dim=1)
@@ -81,8 +79,11 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
 
     def compress(self, x: torch.Tensor) -> Dict:
         """
+        Compresses the input x to bytestrings.
+        Compression is done in img wise mannor where every image in batch is compressed serially.
+
         returns dict with keys 'strings' and 'shape'
-        'strings' is list of compressed y and z
+        'strings' is list of compressed y and z. One element for each img in batch
         'shape' is h,w shape of z
         """
         y = self.g_a(x)
@@ -93,7 +94,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
 
         y_strings = []
         for i in range(y.size(0)):
-            string = self.compress_batch(y[[i],:,:,:], psi[[i],:,:,:])
+            string = self._compress_img(y[[i],:,:,:], psi[[i],:,:,:])
             y_strings.append(string)
 
         return {
@@ -101,9 +102,11 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
             "shape": z.size()[-2:]
         }
     
-    @torch.no_grad()
-    def compress_batch(self, x: torch.Tensor, psi: torch.Tensor) -> str:
 
+    def _compress_img(self, x: torch.Tensor, psi: torch.Tensor) -> str:
+        """
+        compresses one image to bytestring
+        """
         cdf = self.gaussian_conditional.quantized_cdf.tolist()
         cdf_lengths = self.gaussian_conditional.cdf_length.reshape(-1).int().tolist()
         offsets = self.gaussian_conditional.offset.reshape(-1).int().tolist()
@@ -127,6 +130,9 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
 
     def decompress(self, strings: list, shape: torch.Size) -> Dict:
         """
+        Decompresses batch of bytestring into images.
+        Decompression is done sequentially for each image in batch.
+
         returns dict with key 'x_hat'
         """
         assert isinstance(strings, list) and len(strings) == 2
@@ -136,7 +142,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
 
         y_batches = []
         for i, y_string in enumerate(strings[0]):
-            y_b = self.decompress_batch(y_string, psi[[i],:,:,:])
+            y_b = self._decompress_image(y_string, psi[[i],:,:,:])
             y_batches.append(y_b)
 
         y_hat = torch.cat(y_batches, dim=0)
@@ -144,8 +150,11 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
 
         return {"x_hat": x_hat}
     
-    @torch.no_grad()
-    def decompress_batch(self, batch: str, psi: torch.Tensor) -> torch.Tensor:
+
+    def _decompress_image(self, batch: str, psi: torch.Tensor) -> torch.Tensor:
+        """
+        Decompress one bytestring into image
+        """
         cdf = self.gaussian_conditional.quantized_cdf.tolist()
         cdf_lengths = self.gaussian_conditional.cdf_length.reshape(-1).int().tolist()
         offsets = self.gaussian_conditional.offset.reshape(-1).int().tolist()

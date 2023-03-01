@@ -50,9 +50,6 @@ class SCCTXModel(nn.Module):
         
         returns: tuple of tensors mu, sigma paramateres to de/encode the 
         non_anchor parts of block_i
-
-        predict spatial context using psi, g_sps[block_i](y_anchor) and 
-        g_ch[<block_i](y_hat) to get theta(chX, sp2)
         """
         sp_cx = self.g_sps[block_i](y_anchor)
         if block_i == 0:
@@ -64,7 +61,6 @@ class SCCTXModel(nn.Module):
             sp_cx[:, :, 0::2, 1::2] = 0
             sp_cx[:, :, 1::2, 0::2] = 0
         cat = torch.cat((sp_cx, ch_cx, psi), dim=1)
-        # add masking option for training??
         theta = self.param_aggs[block_i](cat)
         scales, means = theta.chunk(2,1)
         return means, scales
@@ -102,7 +98,6 @@ class ParamAgg(nn.Module):
         i = 4*Mk+2*M
         o = 2*Mk
         s = (i-o)//3
-        #print(f"{i}->{i-s}->{o+s}->{o}")
         self.block = nn.Sequential(
               conv1x1(i, i-s),
               nn.ReLU(inplace=True),

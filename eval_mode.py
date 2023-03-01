@@ -159,7 +159,7 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
             whole = transforms.ToPILImage()(out_dec['x_hat'].squeeze().cpu())
             
             imgs = [img, rec_net, whole]
-            titles = ['Original', 'Reconstructed', 'Compression + Decompression']
+            titles = ['Original', 'Forward pass', 'Compression + Decompression']
             # save with suplot iteratively
             _, axs = plt.subplots(1, len(imgs), figsize=(10, 5))
             plt.suptitle(f'ELIC Result')
@@ -458,10 +458,10 @@ def main(argv):
         sys.stderr.flush()
 
     description = (
-        "ELIC MODEL"
+        "ELIC_MODEL"
     )
     output = {
-        "name": f"ELIC MODEL-{args.metric}",
+        "name": f"ELIC_MODEL-{args.metric}",
         "description": f"Inference ({description})",
         "results": metrics_list,
     }

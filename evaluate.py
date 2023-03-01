@@ -59,7 +59,7 @@ def main(argv):
                 axes[0].imshow(img)
                 axes[0].title.set_text('Original')
                 axes[1].imshow(rec_net)
-                axes[1].title.set_text('Reconstructed')
+                axes[1].title.set_text('forward pass')
                 axes[2].imshow(whole)
                 axes[2].title.set_text('compress+decompress')
                 plt.savefig("eval.png")
