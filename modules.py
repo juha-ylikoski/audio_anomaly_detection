@@ -78,7 +78,7 @@ class SCCTXModel(nn.Module):
         """
         if block_i == 0:
             bs,c,h,w = psi.shape
-            ch_cx = torch.zeros(bs, 2*self.block_sizes[block_i], h, w)
+            ch_cx = torch.zeros(bs, 2*self.block_sizes[block_i], h, w, dtype=psi.dtype, device=psi.device)
         else:
             ch_cx = self.g_chs[block_i-1](torch.cat(y_hat, dim=1))
 

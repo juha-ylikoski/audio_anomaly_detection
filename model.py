@@ -223,7 +223,7 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
         indexes = self.gaussian_conditional.build_indexes(scales_squeeze)
         anchor_hat = decoder.decode_stream(indexes.reshape(-1).tolist(), cdf, cdf_lengths, offsets)
         anchor_hat = torch.Tensor(anchor_hat).reshape(scales_squeeze.shape).to(
-            scales_anchor.device) + means_squeeze
+            scales_anchor.device).to(scales_anchor.dtype) + means_squeeze
         anchor_hat = self.ckbd_anchor_unsequeeze(anchor_hat)
         return anchor_hat
 
@@ -239,34 +239,34 @@ class ELICModel(JointAutoregressiveHierarchicalPriors):
         indexes = self.gaussian_conditional.build_indexes(scales_squeeze)
         nonanchor_hat = decoder.decode_stream(indexes.reshape(-1).tolist(), cdf, cdf_lengths, offsets)
         nonanchor_hat = torch.Tensor(nonanchor_hat).reshape(scales_squeeze.shape).to(
-            scales_nonanchor.device) + means_squeeze
+            scales_nonanchor.device).to(scales_nonanchor.dtype) + means_squeeze
         nonanchor_hat = self.ckbd_nonanchor_unsequeeze(nonanchor_hat)
         return nonanchor_hat
 
     def ckbd_anchor_sequeeze(self, y: torch.Tensor) -> torch.Tensor:
         B, C, H, W = y.shape
-        anchor = torch.zeros([B, C, H, W // 2]).to(y.device)
+        anchor = torch.zeros([B, C, H, W // 2], dtype=y.dtype).to(y.device)
         anchor[:, :, 0::2, :] = y[:, :, 0::2, 1::2]
         anchor[:, :, 1::2, :] = y[:, :, 1::2, 0::2]
         return anchor
 
     def ckbd_nonanchor_sequeeze(self, y: torch.Tensor) -> torch.Tensor:
         B, C, H, W = y.shape
-        nonanchor = torch.zeros([B, C, H, W // 2]).to(y.device)
+        nonanchor = torch.zeros([B, C, H, W // 2], dtype=y.dtype).to(y.device)
         nonanchor[:, :, 0::2, :] = y[:, :, 0::2, 0::2]
         nonanchor[:, :, 1::2, :] = y[:, :, 1::2, 1::2]
         return nonanchor
 
     def ckbd_anchor_unsequeeze(self, anchor: torch.Tensor) -> torch.Tensor:
         B, C, H, W = anchor.shape
-        y_anchor = torch.zeros([B, C, H, W * 2]).to(anchor.device)
+        y_anchor = torch.zeros([B, C, H, W * 2], dtype=anchor.dtype).to(anchor.device)
         y_anchor[:, :, 0::2, 1::2] = anchor[:, :, 0::2, :]
         y_anchor[:, :, 1::2, 0::2] = anchor[:, :, 1::2, :]
         return y_anchor
 
     def ckbd_nonanchor_unsequeeze(self, nonanchor: torch.Tensor) -> torch.Tensor:
         B, C, H, W = nonanchor.shape
-        y_nonanchor = torch.zeros([B, C, H, W * 2]).to(nonanchor.device)
+        y_nonanchor = torch.zeros([B, C, H, W * 2], dtype=nonanchor.dtype).to(nonanchor.device)
         y_nonanchor[:, :, 0::2, 0::2] = nonanchor[:, :, 0::2, :]
         y_nonanchor[:, :, 1::2, 1::2] = nonanchor[:, :, 1::2, :]
         return y_nonanchor

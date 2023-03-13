@@ -155,21 +155,20 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
             
             # iterate over the batch and plot the images
             img = transforms.ToPILImage()(x.squeeze().cpu())
-            rec_net = transforms.ToPILImage()(out_net['x_hat'].squeeze().cpu())
+            #rec_net = transforms.ToPILImage()(out_net['x_hat'].squeeze().cpu())
             whole = transforms.ToPILImage()(out_dec['x_hat'].squeeze().cpu())
             
-            imgs = [img, rec_net, whole]
-            titles = ['Original', 'Forward pass', 'Compression + Decompression']
+            imgs = [img, whole]#[img, rec_net, whole]
+            titles = ['Original','Compression + Decompression']#['Original', 'Forward pass', 'Compression + Decompression']
             # save with suplot iteratively
             _, axs = plt.subplots(1, len(imgs), figsize=(10, 5))
-            plt.suptitle(f'ELIC Result')
+            plt.suptitle(f'avg. bits per pixel: {bpp:.4f}')
             for ix,_ in enumerate(imgs):
                 axs[ix].imshow(imgs[ix])
                 axs[ix].set_title(titles[ix])
                 axs[ix].axis('off')
             plt.tight_layout()
             plt.savefig(f'./{output_dir}/{offset+i}.png')
-                        
 
             out_criterion = criterion(out_net, x)
             aux_loss.update(model.aux_loss())
@@ -420,7 +419,7 @@ def main(argv):
     test_dataset = ImageFolder(args.dataset, split="test", transform=transforms.ToTensor())
     test_dataloader = DataLoader(
         test_dataset,
-        batch_size=16,
+        batch_size=1,
         num_workers=1,
         shuffle=False,
         pin_memory=(device == "cuda"),
@@ -433,7 +432,7 @@ def main(argv):
         Path(args.output_directory).mkdir(parents=True, exist_ok=True)
 
 
-    model = ELICModel()
+    model = ELICModel(M=192,N=128)
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(checkpoint["state_dict"])
     model.update()
