@@ -16,8 +16,8 @@
 %
 % Single address.
 % ---------------
-\name{Author(s) Name(s)\thanks{Thanks to XYZ agency for funding.}}
-\address{Author Affiliation(s)}
+\name{Juha Ylikoski, Teemu Eerola, Nardos Estifanos}
+\address{juha.ylikoski@tuni.fi, teemu.eerola@tuni.fi, nardos.estifanos@tuni.fi}
 %
 % For example:
 % ------------
@@ -54,9 +54,14 @@ in black ink.
 \end{abstract}
 %
 \begin{keywords}
-One, two, three, four, five
+Learned image compression
 \end{keywords}
 %
+
+\setcounter{section}{-1}
+
+\section{Authors' contributions}
+
 \section{Introduction} % Juha
 \label{sec:intro}
 With the rise of cloud services and mobile devices, the amount of stored digital media has grown rapidly. 
@@ -65,7 +70,7 @@ Traditionally these images have been compressed or encoded to formats like jpeg 
 With the rise of neural networks and machine learning there has been many attempts to achieve higher compression ratios and lose less details.
 Many of these methods have achieved higher compression ratio with better perceived image quality and less visible artifacts but have been prohibitively expensive in terms of computational cost.
 
-This work tries to replicate paper from Dailan et al\cite{ELIC} which has introduced an efficient learned image compression method (ELIC) which fairs well in the benchmarks and is also reasonable in terms of computational cost.
+This work tries to replicate paper ELIC: Efficient learned image compression with unevenly grouped space-channel contextual adaptive coding \cite{ELIC} which has introduced an efficient learned image compression method (ELIC) which fairs well in the benchmarks and is also reasonable in terms of computational cost.
 The model is based on multiple convolutional neural networks which encode the image into latent space.
 This latent representation is then passed into autoencoder which compresses it and is sent to the receiver. 
 The autoencoder takes as parameters input from a model they call Space-Channel ConTeXt (SCCTX).
