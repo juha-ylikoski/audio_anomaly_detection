@@ -99,8 +99,10 @@ blue and red arrows denote the encoding and decoding data flow. The orange ones 
     \label{fig:architecture}
 \end{figure}
 
+\begin{table}[!h]
+\label{table:architecture}
 \begin{center}
-\caption{Table \ref{table:architecture}: Architecture of ELIC-sm main transform networks. \cite{ELIC}}\\
+\caption{Architecture of ELIC-sm main transform networks. \cite{ELIC}}
 \begin{tabular}{l|l}
 \hline
 Analyzer $g_a$ & Synthesizer $g_s$ \\
@@ -116,8 +118,8 @@ ResBottleneck$\times$1 & ResBottleneck$\times$1 \\
 Conv 5 $\times$ 5, s2, M & TConv 5 $\times$ 5, s2, 3 \\
 \hline
 \end{tabular}
-\label{table:architecture}
 \end{center}
+\end{table}
 
 We chose the smaller ELIC-sm architecture to reduce the amount of computational complexity and the need for data. We also kept the hyperparameters $M$ and $N$ reasonably low to further ease the training of the model. $M$ controls the number of channels in latent space and $N$ the number of channels in main transform networks. We leverage the ready-made implementation of Gaussian and arithmetic en/de-coders from CompressAI library \cite{compressai}. 
 
@@ -132,11 +134,13 @@ The combined representation of prediction parameters is got from parameter aggre
 
 The table \ref{table:SCCTX} shows the number of trainable parameters in thousands of SCCTX for channel number of $M=192$ and the default channel block sizes $(16,16,32,64,M-128)$ from the ELIC paper. The channel context model parameters for block$_0$ is \textit{NaN}, because it does not exists due to reasons discussed earlier. 
 
+\begin{table}[!h]
+\label{table:SCCTX}
 \begin{center}
-\caption{Table \ref{table:SCCTX}: Number of trainable parameters in SCCTX in\\ thousands for each block ($b_i$) and for each component.}\\
+\caption{Number of trainable parameters in SCCTX in\\ thousands for each block ($b_i$) and for each component.}
 \begin{tabular}{c c c c c c c} 
  \hline
- _ & b_0 & b_1 & b_2 & b_3 & b_4 & sum \\  
+  & $b_0$ & $b_1$ & $b_2$ & $b_3$ & $b_4$ & sum \\
  \hline\hline
  channel & \textit{NaN} & 26 & 103 & 410 & 512 & 1050 \\
  \hline
@@ -147,8 +151,8 @@ The table \ref{table:SCCTX} shows the number of trainable parameters in thousand
  sum & 210 & 236 & 431 & 1095 & 1197 & 3169 \\
  \hline
 \end{tabular}
-\label{table:SCCTX}
 \end{center}
+\end{table}
 
 \subsection{Training versus compression flow}
 The inference and training procedures differ from each other due to the undifferentiable nature of encoders. In inference time we want to compress the image to actual discrete bitstream and in training we want to just get the likelihoods from the entropy models and retain the gradient information. The gradient can be retained from the encoders by not compressing the image to bitstream, but just adding gaussian noise to image to mimic the effect of quantization. The approach was presented by \cite{balle2016}. 
