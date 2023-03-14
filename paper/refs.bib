@@ -94,3 +94,47 @@ year = {2017},
 }
 
 
+@inproceedings{PO-ELIC,
+abstract = {In the past years, learned image compression (LIC) has achieved remarkable performance. The recent LIC methods outperform VVC in both PSNR and MS-SSIM. However, the low bit-rate reconstructions of LIC suffer from artifacts such as blurring, color drifting and texture missing. Moreover, those varied artifacts make image quality metrics correlate badly with human perceptual quality. In this paper, we propose PO-ELIC, i.e., Perception-Oriented Efficient Learned Image Coding. To be specific, we adapt ELIC, one of the state-of-the-art LIC models, with adversarial training techniques. We apply a mixture of losses including hinge-form adversarial loss, Charbonnier loss, and style loss, to finetune the model towards better perceptual quality. Experimental results demonstrate that our method achieves comparable perceptual quality with HiFiC with much lower bitrate.},
+author = {He, Dailan and Yang, Ziming and Yu, Hongjiu and Xu, Tongda and Luo, Jixiang and Chen, Yuan and Gao, Chenjian and Shi, Xinjie and Qin, Hongwei and Wang, Yan},
+address = {Piscataway},
+booktitle = {2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops (CVPRW)},
+copyright = {Copyright The Institute of Electrical and Electronics Engineers, Inc. (IEEE) 2022},
+isbn = {1665487399},
+issn = {2160-7516},
+keywords = {Adaptation models ; Blurring ; Computer vision ; Image coding ; Image color analysis ; Image compression ; Image quality ; Measurement ; Pattern recognition ; Perception ; Training ; Visualization},
+language = {eng},
+pages = {1763-1768},
+publisher = {IEEE},
+title = {PO-ELIC: Perception-Oriented Efficient Learned Image Coding},
+year = {2022},
+}
+
+@article{diffusion,
+abstract = {We consider a novel lossy compression approach based on unconditional diffusion generative models, which we call DiffC. Unlike modern compression schemes which rely on transform coding and quantization to restrict the transmitted information, DiffC relies on the efficient communication of pixels corrupted by Gaussian noise. We implement a proof of concept and find that it works surprisingly well despite the lack of an encoder transform, outperforming the state-of-the-art generative compression method HiFiC on ImageNet 64x64. DiffC only uses a single model to encode and denoise corrupted pixels at arbitrary bitrates. The approach further provides support for progressive coding, that is, decoding from partial bit streams. We perform a rate-distortion analysis to gain a deeper understanding of its performance, providing analytical results for multivariate Gaussian data as well as theoretic bounds for general distributions. Furthermore, we prove that a flow-based reconstruction achieves a 3 dB gain over ancestral sampling at high bitrates.},
+author = {Theis, Lucas and Salimans, Tim and Hoffman, Matthew D and Mentzer, Fabian},
+address = {Ithaca},
+copyright = {2022. This work is published under http://arxiv.org/licenses/nonexclusive-distrib/1.0/ (the “License”). Notwithstanding the ProQuest Terms and Conditions, you may use this content in accordance with the terms of the License.},
+issn = {2331-8422},
+journal = {arXiv.org},
+keywords = {Coders ; Coding ; Decoding ; Multivariate analysis ; Pixels ; Random noise},
+language = {eng},
+publisher = {Cornell University Library, arXiv.org},
+title = {Lossy Compression with Gaussian Diffusion},
+year = {2022},
+}
+
+@article{HIFIC,
+abstract = {We extensively study how to combine Generative Adversarial Networks and learned compression to obtain a state-of-the-art generative lossy compression system. In particular, we investigate normalization layers, generator and discriminator architectures, training strategies, as well as perceptual losses. In contrast to previous work, i) we obtain visually pleasing reconstructions that are perceptually similar to the input, ii) we operate in a broad range of bitrates, and iii) our approach can be applied to high-resolution images. We bridge the gap between rate-distortion-perception theory and practice by evaluating our approach both quantitatively with various perceptual metrics, and with a user study. The study shows that our method is preferred to previous approaches even if they use more than 2x the bitrate.},
+author = {Mentzer, Fabian and Toderici, George and Tschannen, Michael and Agustsson, Eirikur},
+address = {Ithaca},
+copyright = {2020. This work is published under http://arxiv.org/licenses/nonexclusive-distrib/1.0/ (the “License”). Notwithstanding the ProQuest Terms and Conditions, you may use this content in accordance with the terms of the License.},
+issn = {2331-8422},
+journal = {arXiv.org},
+keywords = {Image compression ; Image resolution},
+language = {eng},
+publisher = {Cornell University Library, arXiv.org},
+title = {High-Fidelity Generative Image Compression},
+year = {2020},
+}
+
