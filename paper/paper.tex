@@ -16,8 +16,8 @@
 %
 % Single address.
 % ---------------
-\name{Author(s) Name(s)\thanks{Thanks to XYZ agency for funding.}}
-\address{Author Affiliation(s)}
+\name{Authors\\ Juha Ylikoski, Nardos Estifanos, Teemu Eerola \\Tampere University\thanks{Thanks to XYZ agency for funding.}}
+\address{\{juha.ylikoski, nardos.estifanos, teemu.eerola\}@tuni.fi}
 %
 % For example:
 % ------------
@@ -54,7 +54,7 @@ in black ink.
 \end{abstract}
 %
 \begin{keywords}
-One, two, three, four, five
+AUTHORS CONTRIBUTION?
 \end{keywords}
 %
 \section{Introduction} % Juha
@@ -65,11 +65,11 @@ Traditionally these images have been compressed or encoded to formats like jpeg 
 With the rise of neural networks and machine learning there has been many attempts to achieve higher compression ratios and lose less details.
 Many of these methods have achieved higher compression ratio with better perceived image quality and less visible artifacts but have been prohibitively expensive in terms of computational cost.
 
-This work tries to replicate paper from Dailan et al\cite{ELIC} which has introduced an efficient learned image compression method (ELIC) which fairs well in the benchmarks and is also reasonable in terms of computational cost.
+This work tries to replicate paper from He \textit{et al.}\cite{ELIC} which has introduced an efficient learned image compression method (ELIC) which fairs well in the benchmarks and is also reasonable in terms of computational cost.
 The model is based on multiple convolutional neural networks which encode the image into latent space.
 This latent representation is then passed into autoencoder which compresses it and is sent to the receiver. 
 The autoencoder takes as parameters input from a model they call Space-Channel ConTeXt (SCCTX).
-This model optimizes the arithmetic encoders performance with input parameters from ... (some technical stuff about scctx) TEEMU?
+This model optimizes the encoding/decoding parameters of Gaussian encoder to minimize the redundancy in both channel dimension and in spatial dimension to further reduce the number of bits transferred.
 
 The output of the arithmetic decoder is passed into otherwise identical neural network as the first one in the pipeline, but in reversed order of layers with transposed convolutional layers instead of convolutional layers.
 The output of this network is now our final image output. 
@@ -81,7 +81,75 @@ Second limitation of this network is the amount of time it takes to encode an im
 Even when it is considerably faster than other learned image compression methods, in our testing it still very slow and instead of highlighted 100 microseconds for a image which size was not specified, when we tried to encode and compress an 1024x2048 sized image it took approximately 4 seconds for encoding and 5 seconds for decoding.
 Most likely our implementation has many problems which would cause this value to be far away from the highlighted one, but we are about 4 magnitudes away from their highlighted value which at least to us raises some questions.
 
+\section{Methodology}
+\label{sec:methods}
+\subsection{architecture}
+\label{sec:architecture}
+In this work, we adopted the ELIC-sm model architecture, which is a significantly smaller model that full ELIC architecture presented in Figure \ref{fig:architecture}. The differences to ELIC are in main transform networks $g_a$ and $g_s$ where ELIC-sm do not implement attention blocks and have only 1 residual block sequentially connected rather than 3 in full ELIC. The architecture of the implemented model is described in table \ref{table:architecture} following table 2 of ELIC paper supplementary material \cite{ELIC}. In the table 5x5 denotes the kernel size 5, s2 the stride in convolution to be 2 and the last symbol in each row presents the number of output channels. 
+\begin{figure}
+    \centering
+    \includegraphics[width=3in]{architecture.png}
+    \caption{Architecture of full ELIC \cite{ELIC}. The
+blue and red arrows denote the encoding and decoding data flow. The orange ones are shared by both encoding and decoding. MAKE THE FIGURE AND CAPTION TO SPAN 2 COLUMNS}
+    \label{fig:architecture}
+\end{figure}
 
+\begin{center}
+\caption{Table \ref{table:architecture}: Architecture of ELIC-sm main transform networks. \cite{ELIC}}\\
+\begin{tabular}{l|l}
+\hline
+Analyzer $g_a$ & Synthesizer $g_s$ \\
+\hline
+in: 3-channel image & in: M-channel symbols \\
+\hline
+Conv 5 $\times$ 5, s2, N & TConv 5 $\times$ 5, s2, N \\
+ResBottleneck$\times$1 & ResBottleneck$\times$1 \\
+Conv 5 $\times$ 5, s2, N & TConv 5 $\times$ 5, s2, N \\
+ResBottleneck$\times$1 & ResBottleneck$\times$1 \\
+Conv 5 $\times$ 5, s2, N & TConv 5 $\times$ 5, s2, N \\
+ResBottleneck$\times$1 & ResBottleneck$\times$1 \\
+Conv 5 $\times$ 5, s2, M & TConv 5 $\times$ 5, s2, 3 \\
+\hline
+\end{tabular}
+\label{table:architecture}
+\end{center}
+
+We chose the smaller ELIC-sm architecture to reduce the amount of computational complexity and the need for data. We also kept the hyperparameters $M$ and $N$ reasonably low to further ease the training of the model. $M$ controls the number of channels in latent space and $N$ the number of channels in main transform networks. We leverage the ready-made implementation of Gaussian and arithmetic en/de-coders from CompressAI library \cite{compressai}. 
+
+\subsection{Space-Channel Context model}
+In works previously that ELIC \cite{ELIC} the context models were used only to predict either parameters of channel wise or spatial context to encode/decode pixels \cite{balle2016, mbt2018, balle2018, checkerboard}. The proposed method in ELIC uses both channel and spatial information in context model to predict the parameters $\mathbf{\Theta_i^{(k)}}$of next group \cite{ELIC}. 
+
+The channel groups are formed in uneven manner based on observation that most of the energy is often concentrated on early channels. Therefore, the number of channels in groups is rising towards latter groups. The context prediction is made using all previous channel groups combined. When encoding or decoding the first channel group the channel wise context is therefore set to zeros. Because the uneven groups the sizes of inputs and outputs of the channel context model changes over the groups, and therefore separate model is implemented for each group. The number of networks is one less than number of groups because the networks make prediction of the next group parameters. The architecture of channel-wise context model is implemented as it is from the ELIC paper. \cite{ELIC} We doubled the number of channels only in the last convolutional layer.
+
+The spatial context can be implemented as autoregressive convolution where each pixel prior to the current pixel must be predicted \cite{mbt2018}. A more efficient approach to implement spatial context prediction as checkerboard convolution introduced by He \textit{et al.} 2021 \cite{checkerboard}. The concept involves dividing the group into half like picking only the white or black squares from checkerboard and making predictions to these anchor pixels first. Another half of the group, the non-anchors, can be then predicted using the firstly encoded/decoded group as context. In the prediction of anchor parameters, the spatial context is simply set to zeros. The architecture of spatial context module is implemented with one checkerboard convolution layer with kernel size of 5 and stride of 1 that keeps the number of channels the same. 
+
+The combined representation of prediction parameters is got from parameter aggregation network that combines the spatial and channel wise context predictions with hyperprior $\mathbf{\Psi}$ from hyperparameter synthetization network $h_s$. Because of uneven sizes of channel groups, channel and spatial context prediction networks, a separate networks needs to be implemented for each group. Architecture of parameter aggregation network is implemented as it is in the ELIC paper figure 6 with linear reduction of channels in layers \cite{ELIC}. 
+
+The table \ref{table:SCCTX} shows the number of trainable parameters in thousands of SCCTX for channel number of $M=192$ and the default channel block sizes $(16,16,32,64,M-128)$ from the ELIC paper. The channel context model parameters for block$_0$ is \textit{NaN}, because it does not exists due to reasons discussed earlier. 
+
+\begin{center}
+\caption{Table \ref{table:SCCTX}: Number of trainable parameters in SCCTX in\\ thousands for each block ($b_i$) and for each component.}\\
+\begin{tabular}{c c c c c c c} 
+ \hline
+ _ & b_0 & b_1 & b_2 & b_3 & b_4 & sum \\  
+ \hline\hline
+ channel & \textit{NaN} & 26 & 103 & 410 & 512 & 1050 \\
+ \hline
+ spatial & 13 & 13 & 51 & 205 & 205 & 487 \\
+ \hline
+ par.agg. & 198 & 198 & 277 & 480 & 480 & 1632 \\
+ \hline
+ sum & 210 & 236 & 431 & 1095 & 1197 & 3169 \\
+ \hline
+\end{tabular}
+\label{table:SCCTX}
+\end{center}
+
+\subsection{Training versus compression flow}
+The inference and training procedures differ from each other due to the undifferentiable nature of encoders. In inference time we want to compress the image to actual discrete bitstream and in training we want to just get the likelihoods from the entropy models and retain the gradient information. The gradient can be retained from the encoders by not compressing the image to bitstream, but just adding gaussian noise to image to mimic the effect of quantization. The approach was presented by \cite{balle2016}. 
+With the checkerboard spatial context model another shortcut can be made in training time to further reduce the computational complexity of training. Following the work of He \textit{et al.} 2021 \cite{checkerboard} we used one pass encoding in training where parameters of non-anchor blocks are calculated from the input without calculating the parameters of anchor blocks. This approach was different from that presented in ELIC paper \cite{ELIC}, where they encoded $y+mu$ to bitstream instead of $y$ and therefore one pass encoding was not possible. We did not follow the implementation of ELIC because of lack of understanding about entropy models.
+
+At inference time we calculate a separate bitstream to each image in batch sequentially and leverage the full context prediction by first decoding the anchor blocks and then the non-anchor blocks. This still allows us to decode the channel blocks in the image separately using the features of entropy model. However, for practical use cases, the batch processing should be allowed to benefit from the parallel computation capabilities of GPUs.
 
 \section{Experiments}
 \label{sec:experiments}
