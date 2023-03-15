@@ -8,9 +8,13 @@ torch = "*"
 autopep8 = "*"
 compressai = "*"
 tensorboard = "*"
+simplejpeg = "*"
+imageio = "*"
+
 
 [dev-packages]
 torch-tb-profiler = "*"
+ipykernel = "*"
 
 [requires]
 python_version = "3.10"
