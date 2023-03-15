@@ -1,17 +1,11 @@
-# python eval_mode.py checkpoint  --checkpoint "./checkpoint_best_loss.pth.tar" --dataset "./CLIC Dataset/" -d "./output_eval_clic"
-# python eval_mode.py checkpoint  --checkpoint "./checkpoint_best_loss.pth.tar" --dataset "./KODAK Dataset/" -d "./output_eval_kodak"
-
-# python plot.py -f './output_eval_kodak/ELIC MODEL.json' -t "ELIC Model Evaluation on KODAK dataset [PSNR]" -o './output_eval_kodak/elic_kodak_psnr.png' --show
-# python plot.py -f './output_eval_kodak/ELIC MODEL.json' -t "ELIC Model Evaluation on KODAK dataset [MS-SSIM]" -o './output_eval_kodak/elic_kodak_mssim.png' -m 'ms-ssim' --show
-
-# python plot.py -f './output_eval_kodak/ELIC MODEL.json' -t "ELIC Model Evaluation on CLIC dataset [PSNR]" -o './output_eval_kodak/elic_clic_psnr.png' --show
-# python plot.py -f './output_eval_kodak/ELIC MODEL.json' -t "ELIC Model Evaluation on CLIC dataset [MS-SSIM]" -o './output_eval_kodak/elic_clic_msssim.png' -m 'ms-ssim' --show
+# python eval_mode.py checkpoint  --dataset "./CLIC Dataset/" -d "./output_eval_clik" -of "elic_clic"  --checkpoints "./[250,8e-4]_checkpoint_best_loss.pth.tar" "./[300,4e-4]_checkpoint_best_loss.pth.tar" "./[300,8e-4]_checkpoint_best_loss.pth.tar" "./[300,good]checkpoint_best_loss.pth.tar"  --N 192 128 128 192 --M 192 192 192 192
 
 import argparse
 import json
 import math
 import sys
 import time
+import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
@@ -124,7 +118,7 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
         tqdm.write(f"Processing batches {offset // test.shape[0]}")
 
         for i in tqdm(range(test.shape[0])):
-
+            
             x = test[i]
             x = x.unsqueeze(0)
 
@@ -155,20 +149,21 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
             
             # iterate over the batch and plot the images
             img = transforms.ToPILImage()(x.squeeze().cpu())
-            #rec_net = transforms.ToPILImage()(out_net['x_hat'].squeeze().cpu())
+            rec_net = transforms.ToPILImage()(out_net['x_hat'].squeeze().cpu())
             whole = transforms.ToPILImage()(out_dec['x_hat'].squeeze().cpu())
             
-            imgs = [img, whole]#[img, rec_net, whole]
-            titles = ['Original','Compression + Decompression']#['Original', 'Forward pass', 'Compression + Decompression']
+            imgs = [img, whole]
+            titles = ['Original', 'Compression + Decompression']
             # save with suplot iteratively
             _, axs = plt.subplots(1, len(imgs), figsize=(10, 5))
-            plt.suptitle(f'avg. bits per pixel: {bpp:.4f}')
+            plt.suptitle(f'ELIC Result')
             for ix,_ in enumerate(imgs):
                 axs[ix].imshow(imgs[ix])
                 axs[ix].set_title(titles[ix])
                 axs[ix].axis('off')
             plt.tight_layout()
             plt.savefig(f'./{output_dir}/{offset+i}.png')
+                        
 
             out_criterion = criterion(out_net, x)
             aux_loss.update(model.aux_loss())
@@ -201,10 +196,12 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
 
 
     for k, v in metrics.items():
-        metrics[k] = v / len(test_dataloader)
+        # metrics[k] = v / len(test_dataloader)
         metrics_list[k] = sorted(list(np.array(metrics_list[k])/ len(test_dataloader)))
+        print(f'np.mean(np.array(metrics_list[k], dtype=np.half)): {np.mean(np.array(metrics_list[k], dtype=np.half))}')
+        metrics[k] = float(np.mean(np.array(metrics_list[k], dtype=np.half)))
         
-        
+
     return metrics, metrics_list
         
 
@@ -317,6 +314,27 @@ def setup_args():
         help="Checkpoint tar path",
     )
     parent_parser.add_argument(
+        "--checkpoints",
+        nargs="+",
+        help="Checkpoints list",
+    )
+    parent_parser.add_argument(
+        "--description",
+        help="[epoches, lambda]",
+    )
+    parent_parser.add_argument(
+        "--Ns",
+        nargs="+",
+        help="Ns",
+        default=192
+    )
+    parent_parser.add_argument(
+        "--Ms",
+        nargs="+",
+        help="Ms",
+        default=192
+    )
+    parent_parser.add_argument(
         "--half",
         action="store_true",
         help="convert model to half floating point (fp16)",
@@ -401,9 +419,7 @@ def main(argv):
         parser.print_help()
         raise SystemExit(1)
 
-    description = (
-        "ELIC Model"
-    )
+    description = args.description
 
     # filepaths = collect_images(args.dataset)
     # if len(filepaths) == 0:
@@ -419,7 +435,7 @@ def main(argv):
     test_dataset = ImageFolder(args.dataset, split="test", transform=transforms.ToTensor())
     test_dataloader = DataLoader(
         test_dataset,
-        batch_size=1,
+        batch_size=16,
         num_workers=1,
         shuffle=False,
         pin_memory=(device == "cuda"),
@@ -427,54 +443,94 @@ def main(argv):
     )
     print(f'Number of images: {len(test_dataset)}')
     
-    # create output directory
-    if args.output_directory:
-        Path(args.output_directory).mkdir(parents=True, exist_ok=True)
-
-
-    model = ELICModel(M=192,N=128)
-    checkpoint = torch.load(args.checkpoint, map_location=device)
-    model.load_state_dict(checkpoint["state_dict"])
-    model.update()
-    model.eval()
-    model.to(device)
-
     
 
-    args_dict = vars(args)
-    results, metrics_list = eval_model(
-        model,
-        args.output_directory,
-        test_dataloader,
-        criterion,
-        device,
-        **args_dict,
-    )
+    checkpoints = args.checkpoints
+    
+    print(f'checkpoints: {checkpoints}')
+    
+    results = {}
+
+    for i, (checkpoint_path, N, M) in enumerate(zip(checkpoints, args.Ns, args.Ms)):
+        print(f'N: {N} M: {M}')
+        tqdm.write(f"Loading checkpoint {checkpoint_path}")        
+        model = ELICModel(int(N), int(M))
+
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint["state_dict"])
+        model.update()
+        model.eval()
+        model.to(device)
+
+        
+
+        args_dict = vars(args)
+        
+        description = checkpoint_path.split('_')[0].replace('./', '')
+        output_dir = f'{args.output_file}_{description}'
+        # create output directory
+        if output_dir:
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+        result, metrics_list = eval_model(
+            model,
+            output_dir,
+            test_dataloader,
+            criterion,
+            device,
+            **args_dict,
+        )
+        
+        if len(results):
+            # extend results for each key
+            for k, v in result.items():
+                results[k].extend(v)
+                
+        else:
+            results = result
+        
+        output = {
+        "name": f"ELIC MODEL-{description}",
+        "description": f"Inference ({description})",
+        "results": metrics_list,
+        }
+        
+        if output_dir:
+            output_file = (
+                args.output_file
+                if args.output_file
+                else f"{description}"
+            )
+
+            with (Path(f"{output_dir}/{output_file}_metrics_checkpoint_{i+1}").with_suffix(".json")).open(
+                "wb"
+            ) as f:
+                f.write(json.dumps(output, indent=2).encode())
+        print(f'Finished checkpoint {i+1}/{len(checkpoints)}: results: {results}')
     
 
     if args.verbose:
         sys.stderr.write("\n")
         sys.stderr.flush()
 
-    description = (
-        "ELIC_MODEL"
-    )
     output = {
-        "name": f"ELIC_MODEL-{args.metric}",
-        "description": f"Inference ({description})",
-        "results": metrics_list,
+        "name": f"ELIC MODEL",
+        "description": f"Inference (all)",
+        "results": results,
     }
-    if args.output_directory:
-        output_file = (
-            args.output_file
-            if args.output_file
-            else f"{description}"
-        )
 
-        with (Path(f"{args.output_directory}/{output_file}").with_suffix(".json")).open(
-            "wb"
-        ) as f:
-            f.write(json.dumps(output, indent=2).encode())
+    output_file = (
+        args.output_file
+        if args.output_file
+        else f"{description}"
+    )
+
+    
+    with (Path(f"{args.output_directory}/{output_file}").with_suffix(".json")).open(
+        "wb"
+    ) as f:
+        f.write(json.dumps(output, indent=2).encode())
+    
 
     print(json.dumps(output, indent=2))
 
