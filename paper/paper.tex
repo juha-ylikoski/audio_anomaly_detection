@@ -195,6 +195,7 @@ The model was trained with multiple different configurations. We tried $\lambda 
 All of these models were trained for approximately 300 epochs but they could be still trained further.
 Unfortunately due to lack of computational capabilities we could not train more networks and even these networks most likely could have been trained for longer but with epochs taking from 180 seconds (for smaller latent space) to 300 seconds (larger latent space), we could not train them further due to time constraints.
 
+\subsection{Evaluation}
 After obtaining different models with different parameters, we have calculated the PSNR and MS-SSIM \cite{Bjntegaard2001CalculationOA, WangZhou2003Mssf} values to plot the rate-distortion curve which helps in visualizing the performance of compression as well as perceived quality and bits used to represent an image compared to each other and other techniques such as JPEG. For this evaluation, we have modified the script from compressai \cite{compressai} to get close enough comparison with other techniques, and made use of KODAK\cite{kodak} and CLIC professional \cite{clic} datasets.
 
 
@@ -230,6 +231,13 @@ After obtaining different models with different parameters, we have calculated t
 \label{fig:res}
 %
 \end{figure}
+
+To compare the rate distortion performance of various models, we
+present BD-rate \cite{Bjntegaard2001CalculationOA} computed from PSNR-BPP curves as
+the quantitative metric. 
+Like seen from the Fig. \ref{fig:res} our models performance in quantitative evaluation is much worse than any conventional method. The BD-SNR is 19.1929 dB and BD-rate -3.367e+84\% compared to JPEG. In calculations we used only JPEG compressors those \textit{bdd} were in the same range than your models.
+
+From our models, we can compare the performance of two models that were trained on $\lambda$=8e-4 by using the KODAK dataset \cite{kodak}. Other models are not comparable in with BD-rates because the range of \textit{bbp} are different. In terms of BD-rate we got 3.987\% from the model that was trained only 250 epochs compared to the one trained for 300 epochs with yields that less trained model actually performs better. The reason for this is unknown, but overfitting might not an option because the models were still unconverged. 
 
 
 
