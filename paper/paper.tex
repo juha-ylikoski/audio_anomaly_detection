@@ -84,6 +84,30 @@ Second limitation of this network is the amount of time it takes to encode an im
 Even when it is considerably faster than other learned image compression methods, in our testing it still very slow and instead of highlighted 100 microseconds for a image which size was not specified, when we tried to encode and compress an 1024x2048 sized image it took approximately 4 seconds for encoding and 5 seconds for decoding.
 Most likely our implementation has many problems which would cause this value to be far away from the highlighted one, but we are about 4 magnitudes away from their highlighted value which at least to us raises some questions.
 
+
+\section{Related Works}
+\label{sec:related_works}
+Recently, in learned compression, we have seen the proliferation of deep learning-based image compression techniques using automatic coding architectures with great success and promising results. The development of previous learning-based compression models has spanned several years, hence, there are many related works. 
+
+In the early stages, some work was proposed to perform non-differential quantization and rate estimation for complete training, for instance, some works focused on developing network structures that can obtain more compact and efficient latent images and reconstruct high-quality images from compressed images. 
+
+It is noted that traditional image compression techniques, such as JPEG and BPG, have limitations in terms of subjective quality and rate-distortion performance. Learned image compression techniques have shown promise in addressing these limitations by approaching it as rate-distortion optimization problem \cite{ELIC}.
+
+\begin{equation}
+    R + \lambda \cdot D
+\end{equation}
+
+Some approaches include content weighting strategies or combining of different channels using principal component analysis, or consider energy compression or use deep residual devices to improve the network architecture \cite{balle2016}. Recently, several studies have investigated adaptive contextual entropy estimation models to guide the optimization process of neural network parameters to achieve an optimal trade-off between reconstruction error and required bits (entropy), including \cite{AgustssonEirikur2017SVQf, balle2018, mbt2018, LeeJooyoung2019CEMf} Entropy estimation methods have greatly improved learning compression algorithms, and the most representative methods are hyperprior models and joint models.
+
+
+Several recent works that have made significant contributions to the field of learned image compression. One such work is the \cite{VincentPascal2008Eacr, TheisLucas2017Licw, balle2016} End-to-End Optimized Image Compression (EOIC) model, which uses a convolution neural network (CNN) to compress images. EOIC uses a combination of entropy coding and arithmetic coding to achieve high compression rates. Another work is the Generative Adversarial Networks (GAN)-based image compression model, which uses a GAN to generate compressed images. GAN-based models have shown promise in improving the subjective quality of compressed images.
+
+The use of attention mechanisms in learned image compression models is also another discussion. Attention mechanisms allow the model to focus on specific regions of the image that are important for compression. One such model is the Attention Recurrent Network for Image Compression (ARNIC) \cite{XueYuyang2019ABIC}, which uses a recurrent neural network (RNN) with an attention mechanism to compress images. Attention mechanisms have shown promise in improving the rate-distortion performance of learned image compression models.
+
+Another important improvement comes from the use of residual blocks in learned image compression models \cite{balle2016}. Residual blocks are a type of neural network layer that allows for the reuse of features learned in previous layers. They have shown promise in improving the rate-distortion performance of learned image compression models. They are also easier to extend for dynamic or slimmable inference, while other techniques like GDN require special handling.
+
+Learning from these techniques have shown promise in improving the rate-distortion performance of learned image compression models. It is proposed to make use of uneven channel-conditional adaptive coding, motivated by the observation of energy compaction in learned image compression.
+
 \section{Methodology}
 \label{sec:methods}
 \subsection{architecture}
@@ -170,6 +194,44 @@ The forward method of the network does not fully compress the images but it tran
 The model was trained with multiple different configurations. We tried $\lambda \in \{0.0008, 0.001\}$ where latent space channels $M$ and $N$ were $M=N=192$ and $\lambda \in \{0.0004, 0.0008\}$ where latent space channels $M$ and $N$ were $M=192, N=128$.
 All of these models were trained for approximately 300 epochs but they could be still trained further.
 Unfortunately due to lack of computational capabilities we could not train more networks and even these networks most likely could have been trained for longer but with epochs taking from 180 seconds (for smaller latent space) to 300 seconds (larger latent space), we could not train them further due to time constraints.
+
+After obtaining different models with different parameters, we have calculated the PSNR and MS-SSIM \cite{Bjntegaard2001CalculationOA, WangZhou2003Mssf} values to plot the rate-distortion curve which helps in visualizing the performance of compression as well as perceived quality and bits used to represent an image compared to each other and other techniques such as JPEG. For this evaluation, we have modified the script from compressai \cite{compressai} to get close enough comparison with other techniques, and made use of KODAK\cite{kodak} and CLIC professional \cite{clic} datasets.
+
+
+\section{Results}
+\label{sec:results}
+
+
+
+\begin{figure}[htb]
+
+\begin{minipage}[b]{1.0\linewidth}
+  \centering
+  \centerline{\includegraphics[width=8.5cm]{image1}}
+%  \vspace{2.0cm}
+  \centerline{(a) Result 1}\medskip
+\end{minipage}
+%
+\begin{minipage}[b]{.48\linewidth}
+  \centering
+  \centerline{\includegraphics[width=4.0cm]{image3}}
+%  \vspace{1.5cm}
+  \centerline{(b) Results 3}\medskip
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.48\linewidth}
+  \centering
+  \centerline{\includegraphics[width=4.0cm]{image4}}
+%  \vspace{1.5cm}
+  \centerline{(c) Result 4}\medskip
+\end{minipage}
+%
+\caption{Example of placing a figure with experimental results.}
+\label{fig:res}
+%
+\end{figure}
+
+
 
 \section{Discussions and Conclusions}
 The goal of this work was to implement and verify the methods of He \textit{et al.} 2022 \cite{ELIC} for learned image compression. We successfully implemented and trained 4 different models targeted to low compression ratios by varying the model hyperparameters $M$, $N$ and $\lambda$ in loss function. The implementation differs from the paper in few details as discussed earlier. Due to limited time and computing resources we were not able to train our models to convergence and we used fewer images in our training set. Finetuning of the models using MS-SSIM as loss function was also discarded due to computation and time restrictions. 
