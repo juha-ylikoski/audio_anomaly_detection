@@ -47,14 +47,10 @@ def custom_collate(batch):
         img = batch[i] # (3, h, w)
 
         # get the closest power of 2 for the height and width
-        # h = int(2**np.floor(np.log2(img.shape[1])))
-        # w = int(2**np.floor(np.log2(img.shape[2])))
+        h = int(2**np.floor(np.log2(img.shape[1])))
+        w = int(2**np.floor(np.log2(img.shape[2])))
         
-
-
-        
-        # max_dim = max(h,w, max_dim)
-        max_dim = 512
+        max_dim = max(h,w, max_dim)
         
         # resize the image keeping the aspect ratio with skimage
         img = resize(img.numpy(), (3, max_dim, max_dim), preserve_range=True, anti_aliasing=True)
@@ -127,33 +123,33 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
             x = x.unsqueeze(0)
 
             h, w = x.size(2), x.size(3)
-            # pad, unpad = compute_padding(h, w, min_div=2**6)  # pad to allow 6 strides of 2
+            pad, unpad = compute_padding(h, w, min_div=2**6)  # pad to allow 6 strides of 2
             
-            # x_padded = F.pad(x, pad, mode="constant", value=0)
+            x_padded = F.pad(x, pad, mode="constant", value=0)
             
             x = x.to(device)
             out_net = model(x)
 
             start = time.time()
-            out_enc = model.compress(x)
+            out_enc = model.compress(x_padded)
             enc_time = time.time() - start
             
             start = time.time()
             out_dec = model.decompress(out_enc['strings'],out_enc['shape'])
             dec_time = time.time() - start
             
-            # out_dec["x_hat"] = F.pad(out_dec["x_hat"], unpad)
+            out_dec["x_hat"] = F.pad(out_dec["x_hat"], unpad)
 
             # input images are 8bit RGB for now
             _metrics = compute_metrics(x, out_dec["x_hat"], 255)
-            print(f'x.size: {x.size()}')
-            num_pixels = x.size(2) * x.size(3)
+            num_pixels = x.size(0) * x.size(2) * x.size(3)
             bpp = sum(len(s[0]) for s in out_enc["strings"]) * 8.0 / num_pixels
             
             print(f'bpp: {bpp}')
             
             # iterate over the batch and plot the images
             img = transforms.ToPILImage()(x.squeeze().cpu())
+            rec_net = transforms.ToPILImage()(out_net['x_hat'].squeeze().cpu())
             whole = transforms.ToPILImage()(out_dec['x_hat'].squeeze().cpu())
             
             imgs = [img, whole]
@@ -182,8 +178,7 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
                 f"\tBpp loss: {bpp_loss.avg:.2f} |"
                 f"\tAux loss: {aux_loss.avg:.2f}\n"
             )
-            print(f'psnr-rgb: {_metrics["psnr-rgb"]}')
-            print(f'ms-ssim-rgb: {_metrics["ms-ssim-rgb"]}')
+            
             rv = {
                 "psnr-rgb": _metrics["psnr-rgb"],
                 "ms-ssim-rgb": _metrics["ms-ssim-rgb"],
@@ -202,11 +197,9 @@ def inference(model, test_dataloader, criterion, device, loss, bpp_loss, mse_los
 
     for k, v in metrics.items():
         # metrics[k] = v / len(test_dataloader)
-
-        metrics_list[k] = sorted(list(np.array(metrics_list[k])))
-        # print(f'np.mean(np.array(metrics_list[k], dtype=np.half)): {np.mean(np.array(metrics_list[k], dtype=np.half))}')
+        metrics_list[k] = sorted(list(np.array(metrics_list[k])/ len(test_dataloader)))
+        print(f'np.mean(np.array(metrics_list[k], dtype=np.half)): {np.mean(np.array(metrics_list[k], dtype=np.half))}')
         metrics[k] = float(np.mean(np.array(metrics_list[k], dtype=np.half)))
-        print(f'{k}: {metrics[k], metrics_list[k]}')
         
 
     return metrics, metrics_list
