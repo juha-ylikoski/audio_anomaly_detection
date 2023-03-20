@@ -121,7 +121,7 @@ In this work, we adopted the ELIC-sm model architecture, which is a significantl
     \centering
     \includegraphics[width=7in]{architecture.png}
     \caption{Architecture of full ELIC \cite{ELIC}. The
-blue and red arrows denote the encoding and decoding data flow. The orange ones are shared by both encoding and decoding. MAKE THE FIGURE AND CAPTION TO SPAN 2 COLUMNS}
+blue and red arrows denote the encoding and decoding data flow. The orange ones are shared by both encoding and decoding.}
     \label{fig:architecture}
 \end{figure*}
 
@@ -207,33 +207,34 @@ After obtaining different models with different parameters, we have calculated t
 
 In Figure a, we demonstrate the reconstruction performance of the four models trained with different parameters.
 
-\pagebreak
+\begin{table}[!h]
+\label{table:models}
+\begin{center}
+\begin{tabular}{c c c}
+    Row (Model) 1: epoch=250 & $\lambda$=8e-4 & N=M=192 \\
+    Row (Model) 2: epoch=300 & $\lambda$=4e-4 & N=128, M=192 \\
+    Row (Model) 3: epoch=300 & $\lambda$=8e-4 & N=128, M=192 \\
+    \textbf{Row (Model) 4}: epoch=300 & $\lambda$=1e-2 & N=M=192 \\
+\end{tabular}
+\end{center}
+\end{table}
 
-% \begin{minipage}
-% \begin{flushleft}
-% \end{flushleft}
-% \begin{itemize}
-%     \item[] Row (Model) 1: epoch=250 | $\lambda$=8e-4 | N=M=192, 
-%     \item[] Row (Model) 2: epoch=300 | $\lambda$=4e-4 | N=128, M=192, 
-%       \item[] Row (Model) 3: epoch=300 | $\lambda$=8e-4 | N=128, M=192, 
-%       \item[] \textbf{Row (Model) 4}: epoch=300 | $\lambda$=1e-2 | N=M=192
-% \end{itemize}
-% \end{flushleft}
-% \end{minipage}
+\vfill
 
 \begin{figure}[h!]
 \begin{minipage}[b]{0.8\linewidth}
     \centering
-    \includegraphics[width=7.5cm]{psnr_mssim.png}
+    \includegraphics[width=7.2cm]{kodak_fixed.png}
+    \centerline{(a) Average values over KODAK dataset \cite{kodak}.}\medskip
 \end{minipage}
 \begin{minipage}[b]{0.8\linewidth}
     
     \centering
-    \includegraphics[width=7.5cm]{per_img.png}
+    \includegraphics[width=7.2cm]{kodak_per_fixed.png}
+    \centerline{(b) Performance on individual images of KODAK dataset \cite{kodak}.}\medskip
 \end{minipage}
-    \label{fig:architecture}
-    \caption{Architecture of full ELIC \cite{ELIC}. The
-blue and red arrows denote the encoding and decoding data flow. The orange ones are shared by both encoding and decoding. MAKE THE FIGURE AND CAPTION TO SPAN 2 COLUMNS}
+    \label{fig:results}
+    \caption{Results on KODAK dataset \cite{kodak}.}
 \end{figure}
 
 \pagebreak
@@ -243,15 +244,16 @@ blue and red arrows denote the encoding and decoding data flow. The orange ones 
 \begin{minipage}[b]{.8\linewidth}
     \centering
     \includegraphics[width=\linewidth]{reconstruction.png}
+    \centerline{(a)  Result images from our models. Each row is results from the model 1 to 4 respectively}\medskip
 
 \end{minipage}
 \begin{minipage}[b]{.5\linewidth}
     \centering
     \includegraphics[width=\linewidth]{comparison.png}
+    \centerline{(b) Comparisons to conventional image compression methods JPEG and BPG to our results from Model 3 and original image.}\medskip
 \end{minipage}
-    \caption{Architecture of full ELIC \cite{ELIC}. The
-blue and red arrows denote the encoding and decoding data flow. The orange ones are shared by both encoding and decoding. MAKE THE FIGURE AND CAPTION TO SPAN 2 COLUMNS}
-    \label{fig:architecture}
+    \caption{Result/comparison images.}
+    \label{fig:images}
 \end{figure*}
 
 \vfill\pagebreak
