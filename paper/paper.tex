@@ -8,6 +8,8 @@
 \usepackage[section]{placeins}
 \usepackage{float}
 
+\usepackage{hyperref}
+
 % Example definitions.
 % --------------------
 \def\x{{\mathbf x}}
@@ -53,17 +55,12 @@ These new methods are not without their own problems. The large neural network b
 
 In this work we are reviewing and trying to replicate one of these methods which claims good quality, compression ratio and speed.
 \end{abstract}
-%
-\begin{keywords}
-Learned image compression, ELIC Efficient Learned Image Compression
-\end{keywords}
-%
 
 \setcounter{section}{-1}
 
 \section{Authors' contributions}
 
-Juha Ylikoski was responsible for creating the cnns around the SCCTX-model and training the networks. Teemu Eerola was responsible for creating the SCCTX model, forward pass and compression/decompression methods.
+Juha Ylikoski was responsible for creating the cnns around the SCCTX and training the networks. Teemu Eerola was responsible for creating the SCCTX, forward pass and compression/decompression methods.
 Nardos Estifanos was responsible for evaluation of the results.
 All of us were partially responsible for the report for our corresponding parts.
 
@@ -76,6 +73,7 @@ With the rise of neural networks and machine learning there has been many attemp
 Many of these methods have achieved higher compression ratio with better perceived image quality and less visible artifacts but have been prohibitively expensive in terms of computational cost.
 
 This work tries to replicate paper ELIC: Efficient learned image compression with unevenly grouped space-channel contextual adaptive coding \cite{ELIC} which has introduced an efficient learned image compression method (ELIC) which fairs well in the benchmarks and is also reasonable in terms of computational cost.
+We have created a github repository which is freely available \footnote{github repository \url{https://github.com/juha-ylikoski/learned_image_compression}}.
 The model is based on multiple convolutional neural networks which encode the image into latent space.
 This latent representation is then passed into autoencoder which compresses it and is sent to the receiver. 
 The autoencoder takes as parameters input from a model they call Space-Channel ConTeXt (SCCTX).
