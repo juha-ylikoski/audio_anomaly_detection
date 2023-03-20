@@ -63,6 +63,10 @@ Learned image compression, ELIC Efficient Learned Image Compression
 
 \section{Authors' contributions}
 
+Juha Ylikoski was responsible for creating the cnns around the SCCTX-model and training the networks. Teemu Eerola was responsible for creating the SCCTX model, forward pass and compression/decompression methods.
+Nardos Estifanos was responsible for evaluation of the results.
+All of us were partially responsible for the report for our corresponding parts.
+
 \section{Introduction} % Juha
 \label{sec:intro}
 With the rise of cloud services and mobile devices, the amount of stored digital media has grown rapidly. 
@@ -237,7 +241,6 @@ In Fig 2, we demonstrate the reconstruction performance of the four models train
     \caption{Results on KODAK dataset \cite{kodak}.}
 \end{figure}
 
-\pagebreak
 
 \begin{figure*}[h!]
 \centering
@@ -258,6 +261,8 @@ In Fig 2, we demonstrate the reconstruction performance of the four models train
 
 \vfill\pagebreak
 \vfill\pagebreak
+
+Like seen from the Fig. 2 our models performance in quantitative evaluation is worse than any conventional method apart from the JPEG in very low bitrates. The BD-SNR is -8.32 dB and BD-rate 3.84\% compared to JPEG. In calculations we used only JPEG compressors those \textit{bdd} were in the same range than our models. The comparison is not fear because the \textit{bdd} ranges are slightly different as discussed above. From our models, we can compare the performance of two models that were trained on $\lambda$=8e-4 by using the KODAK dataset \cite{kodak}. Other models are not comparable in with BD-rates because the range of \textit{bbp} are different. In terms of BD-rate we got 3.987\% from the model that was trained only 250 epochs and N=M=192 (Model 1) compared to the one trained for 300 epochs with N=128 and M=192 (Model 3) with yields that less trained model with more parameters performs better. This is reasonable since bigger model should have better quality even with bit less training.
 
 
 \section{Discussions and Conclusions}
